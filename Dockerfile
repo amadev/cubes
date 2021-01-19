@@ -48,11 +48,12 @@ FROM python:${PY_VER} AS lean
 
 ENV LANG=C.UTF-8 \
     LC_ALL=C.UTF-8 \
-    FLASK_ENV=development \
-    FLASK_APP="cubes.app:create_app()" \
+    FLASK_ENV=production \
+    FLASK_APP="cubes.server.app:application" \
     PYTHONPATH="/app/pythonpath" \
     CUBES_HOME="/app/cubes_home" \
-    CUBES_PORT=8080
+    CUBES_PORT=8080 \
+    SLICER_CONFIG="/app/config/slicer.ini"
 
 RUN useradd --user-group --no-create-home --no-log-init --shell /bin/bash cubes \
         && mkdir -p ${CUBES_HOME} ${PYTHONPATH} \
@@ -65,7 +66,7 @@ RUN useradd --user-group --no-create-home --no-log-init --shell /bin/bash cubes 
 
 COPY --from=cubes-py /usr/local/lib/python3.7/site-packages/ /usr/local/lib/python3.7/site-packages/
 # Copying site-packages doesn't move the CLIs, so let's copy them one by one
-# COPY --from=cubes-py /usr/local/bin/gunicorn /usr/local/bin/celery /usr/local/bin/flask /usr/bin/
+COPY --from=cubes-py /usr/local/bin/gunicorn /usr/local/bin/flask /usr/bin/
 # COPY --from=cubes-node /app/cubes/static/assets /app/cubes/static/assets
 # COPY --from=cubes-node /app/cubes-frontend /app/cubes-frontend
 
