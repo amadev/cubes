@@ -596,6 +596,15 @@ def logout():
         return "logged out"
 
 
+@slicer.route("/model", methods=["POST"])
+def update_dynamic_model_metadata():
+    data = json.loads(request.data)
+    for provider in workspace.namespace.providers:
+        if hasattr(provider, 'update_metadata'):
+            provider.update_metadata(data)
+    return "ok"
+
+
 @slicer.route("/visualizer/")
 @slicer.route("/visualizer/index.html")
 def get_visualizer():

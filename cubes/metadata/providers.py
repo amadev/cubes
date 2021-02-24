@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """Logical model model providers."""
 import copy
+import json
 
 from ..errors import ModelError, TemplateRequired, CubesError, BackendError
 from ..errors import NoSuchDimensionError, NoSuchCubeError
@@ -8,13 +9,15 @@ from .localization import LocalizationContext
 from .cube import Cube
 from .dimension import Dimension
 
+from cubes.logging import get_logger
+
 __all__ = [
     "ModelProvider",
     "StaticModelProvider",
     "link_cube",
     "find_dimension",
 ]
-
+LOG = get_logger()
 
 # Proposed Provider API:
 #     Provider.cube() – in abstract class
@@ -452,3 +455,33 @@ class StaticModelProvider(ModelProvider):
 
         return cubes
 
+
+class DynamicModelProvider(StaticModelProvider):
+
+    __extension_aliases__ = ["default"]
+
+    def __init__(self, metadata):
+        import sqlalchemy
+        from cubes.sql.store import SQLStore
+        self.model_store = SQLStore(metadata['connection'])
+        try:
+            self.fetch_metadata()
+        except sqlalchemy.exc.OperationalError:
+            LOG.debug("No schema for dynamic model provider found, creating ...")
+            self.model_store.execute("create table model (value text)")
+            self.update_metadata({})
+
+    def update_metadata(self, data):
+        self.model_store.execute("update model set value = '%s'" % json.dumps(data))
+
+    def fetch_metadata(self):
+        cursor = self.model_store.execute("select value from model limit 1")
+        data = list(cursor.fetchone())[0]
+        cursor.close()
+        metadata = json.loads(data)
+        LOG.debug("Fetched dynamic model provider metadata %s", metadata)
+        super(DynamicModelProvider, self).__init__(metadata)
+
+    def list_cubes(self):
+        self.fetch_metadata()
+        return super(DynamicModelProvider, self).list_cubes()

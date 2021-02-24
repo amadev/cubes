@@ -55,6 +55,7 @@ _BUILTIN_EXTENSIONS = {
     "providers": {
         "default":"cubes.metadata.providers:StaticModelProvider",
         "slicer":"cubes.server.store:SlicerModelProvider",
+        "dynamic":"cubes.metadata.providers:DynamicModelProvider",
     },
     "request_log_handlers": {
         "default": "cubes.server.logging:DefaultRequestLogHandler",

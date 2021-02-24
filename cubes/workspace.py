@@ -277,15 +277,16 @@ class Workspace(object):
                 raise ConfigurationError("No model path specified")
 
             path = config.get("model", "path")
-            models.append(("main", path))
+            provider = config.get("model", "provider")
+            models.append(("main", path, provider))
 
         # TODO: Depreciate this too
         if config.has_section("models"):
             models += config.items("models")
 
-        for model, path in models:
+        for model, path, provider in models:
             self.logger.debug("Loading model %s" % model)
-            self.import_model(path)
+            self.import_model(path, provider)
 
     def flush_lookup_cache(self):
         """Flushes the cube lookup cache."""
@@ -403,7 +404,7 @@ class Workspace(object):
         # 1. Metadata
         # -----------
         # Make sure that the metadata is a dictionary
-        # 
+        #
         # TODO: Use "InlineModelProvider" and "FileBasedModelProvider"
 
         if store and not isinstance(store, compat.string_type):
