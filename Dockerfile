@@ -52,7 +52,7 @@ ENV LANG=C.UTF-8 \
     FLASK_APP="cubes.server.app:application" \
     PYTHONPATH="/app/pythonpath" \
     CUBES_HOME="/app/cubes_home" \
-    CUBES_PORT=8080 \
+    CUBES_PORT=5000 \
     SLICER_CONFIG="/app/config/slicer.ini"
 
 RUN useradd --user-group --no-create-home --no-log-init --shell /bin/bash cubes \
@@ -67,8 +67,6 @@ RUN useradd --user-group --no-create-home --no-log-init --shell /bin/bash cubes 
 COPY --from=cubes-py /usr/local/lib/python3.7/site-packages/ /usr/local/lib/python3.7/site-packages/
 # Copying site-packages doesn't move the CLIs, so let's copy them one by one
 COPY --from=cubes-py /usr/local/bin/gunicorn /usr/local/bin/flask /usr/bin/
-# COPY --from=cubes-node /app/cubes/static/assets /app/cubes/static/assets
-# COPY --from=cubes-node /app/cubes-frontend /app/cubes-frontend
 
 ## Lastly, let's install cubes itself
 COPY cubes /app/cubes
@@ -77,7 +75,10 @@ RUN cd /app \
         && chown -R cubes:cubes * \
         && pip install -e .
 
-COPY ./docker/docker-entrypoint.sh /usr/bin/
+COPY docker/docker-entrypoint.sh /usr/bin/
+COPY docker/slicer.ini /app/config/slicer.ini
+COPY docker/model.json /app/config/model.json
+COPY docker/data.sqlite /app/data/data.sqlite
 
 WORKDIR /app
 
@@ -88,17 +89,3 @@ USER cubes
 EXPOSE ${CUBES_PORT}
 
 ENTRYPOINT ["/usr/bin/docker-entrypoint.sh"]
-
-# ######################################################################
-# # Dev image...
-# ######################################################################
-# FROM lean AS dev
-
-# COPY ./requirements/*.txt ./docker/requirements-*.txt/ /app/requirements/
-
-# USER root
-# # Cache everything for dev purposes...
-# RUN cd /app \
-#     && pip install --no-cache -r requirements/docker.txt \
-#     && pip install --no-cache -r requirements/requirements-local.txt || true
-# USER cubes
