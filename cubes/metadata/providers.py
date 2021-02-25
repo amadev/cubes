@@ -466,16 +466,19 @@ class DynamicModelProvider(StaticModelProvider):
         self.model_store = SQLStore(metadata['connection'])
         try:
             self.fetch_metadata()
-        except sqlalchemy.exc.OperationalError:
+        except (sqlalchemy.exc.OperationalError, sqlalchemy.exc.ProgrammingError):
             LOG.debug("No schema for dynamic model provider found, creating ...")
-            self.model_store.execute("create table model (value text)")
-            self.update_metadata({})
+            self.model_store.execute("create table cubes_model_metadata (value text)")
+            self.insert_metadata({})
+
+    def insert_metadata(self, data):
+        self.model_store.execute("insert into cubes_model_metadata values ('%s')" % json.dumps(data))
 
     def update_metadata(self, data):
-        self.model_store.execute("update model set value = '%s'" % json.dumps(data))
+        self.model_store.execute("update cubes_model_metadata set value = '%s'" % json.dumps(data))
 
     def fetch_metadata(self):
-        cursor = self.model_store.execute("select value from model limit 1")
+        cursor = self.model_store.execute("select value from cubes_model_metadata limit 1")
         data = list(cursor.fetchone())[0]
         cursor.close()
         metadata = json.loads(data)

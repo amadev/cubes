@@ -596,13 +596,26 @@ def logout():
         return "logged out"
 
 
-@slicer.route("/model", methods=["POST"])
+@slicer.route("/model", methods=["GET","POST"])
 def update_dynamic_model_metadata():
-    data = json.loads(request.data)
-    for provider in workspace.namespace.providers:
-        if hasattr(provider, 'update_metadata'):
-            provider.update_metadata(data)
-    return "ok"
+    logger.debug("Update dynamic model metadata headers: %s, data: %s", request.headers, request.data)
+    if request.data:
+        try:
+            data = json.loads(request.data)
+            # primitive validation
+            data['cubes'][0]
+            data['dimensions'][0]
+        except (ValueError, TypeError):
+            logger.exception("Invalid data")
+            raise UserError("Invalid data")
+        updated = False
+        for provider in workspace.namespace.providers:
+            if hasattr(provider, 'update_metadata'):
+                provider.update_metadata(data)
+                updated = True
+                break
+        return "updated" if updated else "not updated"
+    return "no data"
 
 
 @slicer.route("/visualizer/")
@@ -621,7 +634,7 @@ def add_cors_headers(response):
     origin = current_app.slicer.allow_cors_origin
     if origin and len(origin):
         if request.method == 'OPTIONS':
-            response.headers['Access-Control-Allow-Headers'] = 'X-Requested-With'
+            response.headers['Access-Control-Allow-Headers'] = '*'
             # OPTIONS preflight requests need to receive origin back instead of wildcard
         if origin == '*':
             response.headers['Access-Control-Allow-Origin'] = request.headers.get('Origin', origin)
